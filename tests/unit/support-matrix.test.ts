@@ -17,4 +17,28 @@ describe("support matrix", () => {
       audioCodec: "opus"
     });
   });
+
+  it("accepts every advertised output tuple", () => {
+    for (const tuple of getSupportedOutputTuples()) {
+      expect(isSupportedOutputTuple(tuple)).toBe(true);
+    }
+  });
+
+  it("does not expose duplicate output tuples", () => {
+    const keys = getSupportedOutputTuples().map((tuple) =>
+      `${tuple.container}:${tuple.videoCodec ?? ""}:${tuple.audioCodec ?? ""}`
+    );
+
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("keeps audio-only containers free of video codecs", () => {
+    const audioOnlyContainers = new Set(["mp3", "m4a", "wav"]);
+
+    for (const tuple of getSupportedOutputTuples()) {
+      if (audioOnlyContainers.has(tuple.container)) {
+        expect(tuple.videoCodec).toBeUndefined();
+      }
+    }
+  });
 });

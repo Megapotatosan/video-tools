@@ -4,9 +4,9 @@ export type AudioCodec = "aac" | "opus" | "mp3" | "flac" | "pcm-s16";
 export type ToolSlug = "media-info" | "convert-video" | "compress-video" | "trim-video" | "extract-audio";
 
 export type OutputTuple = {
-  container: ContainerFormat;
-  videoCodec?: VideoCodec;
-  audioCodec?: AudioCodec;
+  readonly container: ContainerFormat;
+  readonly videoCodec?: VideoCodec;
+  readonly audioCodec?: AudioCodec;
 };
 
 export type MediaJob =

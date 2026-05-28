@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getSupportedOutputTuples } from "@/lib/media/support-matrix";
 import { toolCatalog } from "@/lib/tools/catalog";
+import type { OutputTuple } from "@/lib/media/jobs";
 
 describe("tool catalog", () => {
   it("contains the five launch tools", () => {
@@ -13,12 +14,35 @@ describe("tool catalog", () => {
     ]);
   });
 
-  it("derives advertised outputs from the support matrix", () => {
+  it("partitions advertised outputs by tool capability", () => {
     const matrix = getSupportedOutputTuples();
+    const videoOutputs = matrix.filter((output) => output.videoCodec);
+    const audioOutputs = matrix.filter((output) => !output.videoCodec);
+
+    expect(toolCatalog.find((tool) => tool.slug === "media-info")?.outputs).toEqual([]);
+    expect(toolCatalog.find((tool) => tool.slug === "convert-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "compress-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "trim-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "extract-audio")?.outputs).toEqual(audioOutputs);
+  });
+
+  it("prevents consumers from mutating catalog outputs", () => {
+    expect(Object.isFrozen(toolCatalog)).toBe(true);
+
     for (const tool of toolCatalog) {
+      expect(Object.isFrozen(tool)).toBe(true);
+      expect(Object.isFrozen(tool.outputs)).toBe(true);
+
       for (const output of tool.outputs) {
-        expect(matrix).toContainEqual(output);
+        expect(Object.isFrozen(output)).toBe(true);
       }
     }
+
+    const convertVideo = toolCatalog.find((tool) => tool.slug === "convert-video");
+    const mutableOutputs = convertVideo?.outputs as unknown as OutputTuple[];
+
+    expect(() => {
+      mutableOutputs.push({ container: "webm", videoCodec: "avc", audioCodec: "opus" });
+    }).toThrow(TypeError);
   });
 });
