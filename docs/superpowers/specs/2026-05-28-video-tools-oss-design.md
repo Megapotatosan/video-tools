@@ -22,6 +22,7 @@ References:
 - https://mediabunny.dev/guide/supported-formats-and-codecs
 - https://mediabunny.dev/api/Conversion
 - https://mediabunny.dev/guide/extensions/mp3-encoder
+- https://github.com/Vanilagy/mediabunny/tree/main/packages/mp3-encoder
 - https://developer.mozilla.org/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy
 - https://developers.cloudflare.com/pages/configuration/headers/
 - https://vercel.com/docs/projects/project-configuration
@@ -149,6 +150,8 @@ Capability detection is asynchronous and must happen before calling the pure pla
 
 The same support matrix must feed both `enginePlanner` and the UI catalog. Tool pages should derive displayed input/output support from implemented engine paths so the catalog cannot advertise formats that the planner rejects.
 
+The support matrix must encode valid container and codec pairings, not only individual codec support. The planner should reject invalid tuples such as a video codec inside an incompatible output container before calling an engine or muxer.
+
 Structured planner and runtime errors:
 
 - `UnsupportedContainer`
@@ -161,6 +164,16 @@ Structured planner and runtime errors:
 - `OutOfMemory`
 - `AssetLoadFailed`
 - `Aborted`
+
+### Probing And Media Info
+
+Probe uses MediaBunny first for supported containers. If MediaBunny cannot parse the input and FFmpeg.wasm is available, Media Info may fall back to an FFmpeg probe path. If FFmpeg is not loaded or the file is outside the first-release support matrix, return `UnsupportedContainer` with a clear message rather than attempting a transcode.
+
+### Capability Detection
+
+`capabilities.ts` should use `self.crossOriginIsolated === true` as the signal that threaded FFmpeg.wasm can run. The presence of `SharedArrayBuffer` alone is not sufficient.
+
+Next.js static export is part of the privacy model: it prevents route handlers and server processing from becoming an accidental media backend. Under `output: 'export'`, Next.js `headers()` in `next.config.js` does not apply; deployment headers must live in host-specific config such as `vercel.json` or Cloudflare `_headers`.
 
 ### Privacy Model
 
@@ -181,7 +194,9 @@ Vercel must use `vercel.json` `headers`. Cloudflare Pages must use a `_headers` 
 
 These headers are needed for browser features such as SharedArrayBuffer, which can affect FFmpeg.wasm threaded builds and performance. Single-threaded FFmpeg.wasm should remain a graceful fallback when cross-origin isolation is unavailable.
 
-With `COEP: require-corp`, cross-origin subresources can fail unless they explicitly permit embedding through CORS/CORP. Self-host FFmpeg core assets and worker assets from this app's origin instead of loading them from a CDN by default. Fonts, scripts, WASM, and worker files must be audited under cross-origin isolation.
+With `COEP: require-corp`, cross-origin subresources can fail unless they explicitly permit embedding through CORS/CORP. Self-host FFmpeg core assets and FFmpeg worker assets from this app's origin instead of loading them from a CDN by default. Fonts, scripts, WASM, and worker files must be audited under cross-origin isolation.
+
+`@mediabunny/mp3-encoder` bundles its worker and LAME WASM into a single package file, so it does not require separate CDN or WASM path configuration. It still needs license attribution as described below.
 
 ## GitHub And Release Workflow
 
@@ -202,7 +217,8 @@ When a remote is available, push milestone commits to GitHub. The initial licens
 
 License notes:
 
-- MediaBunny and `@mediabunny/mp3-encoder` are MPL-2.0 dependencies. Do not modify and redistribute their source without preserving MPL-2.0 obligations.
+- MediaBunny is MPL-2.0. Do not modify and redistribute its source without preserving MPL-2.0 obligations.
+- `@mediabunny/mp3-encoder` uses an MPL-2.0 wrapper and includes a WASM build of the LAME MP3 encoder. LAME is LGPL-licensed and the package README requests credit with a link. The README must include attribution for LAME 3.100 when MP3 support ships.
 - The JavaScript wrapper package for FFmpeg.wasm may be MIT, but FFmpeg core builds carry FFmpeg and linked-library licenses. Prefer an LGPL-compatible FFmpeg core build unless a GPL build is explicitly chosen, and document the FFmpeg component license in the README.
 
 ## Testing Strategy
@@ -215,6 +231,7 @@ Unit tests:
 - engine planner decisions
 - support/capability normalization
 - support matrix to UI catalog consistency
+- container and codec tuple validity
 - job planning
 - error mapping
 - cancellation behavior at the engine boundary
@@ -244,7 +261,7 @@ Large media files can exceed browser memory limits, especially in FFmpeg.wasm. F
 
 MediaBunny and WebCodecs support varies by browser and codec. The planner must explain fallback reasons instead of hiding them.
 
-FFmpeg.wasm assets are large. Loading should be lazy and only happen when a job needs the fallback engine. Assets should be self-hosted to avoid COEP/CORP failures.
+FFmpeg.wasm assets are large. Loading should be lazy and only happen when a job needs the fallback engine. FFmpeg assets should be self-hosted to avoid COEP/CORP failures.
 
 The project should avoid over-promising support. Tool pages should show supported formats based on real implemented paths.
 
@@ -256,11 +273,14 @@ The first implementation is complete when:
 - The homepage uses the Hybrid layout.
 - The five first-version tools exist as routes.
 - Media Info works through MediaBunny where supported.
+- Media Info has an explicit FFmpeg probe fallback or a clear `UnsupportedContainer` result.
 - Convert, Compress, Trim, and Extract Audio have working first paths and clear fallback/error states.
 - Extract Audio can produce MP3 through `@mediabunny/mp3-encoder` or FFmpeg.wasm fallback, and the UI makes the chosen path explicit.
 - Compress v1 documents bitrate-target/downscale MediaBunny support and FFmpeg-only advanced compression modes.
 - Engine planner tests pass.
 - Capability probing is async, per-codec, and feeds a pure planner.
+- Capability probing gates threaded FFmpeg on `crossOriginIsolated`.
+- The support matrix rejects invalid container/codec pairings before engine execution.
 - Media processing runs in workers and supports cancellation.
 - Browser smoke tests pass.
 - Vercel and Cloudflare deployment instructions/configs are present, including self-hosted FFmpeg assets and cross-origin isolation headers.
