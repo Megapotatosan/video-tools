@@ -58,6 +58,67 @@ describe("engine planner", () => {
     expect(plan.engine).toBe("ffmpeg");
   });
 
+  it("routes MP3 extraction to FFmpeg when WebCodecs is unavailable", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, hasWebCodecs: false }
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("returns AssetLoadFailed for MP3 extraction when WebCodecs and FFmpeg assets are unavailable", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, hasWebCodecs: false, hasFfmpegAssets: false }
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.reason).toBe("unsupported");
+    expect(plan.error?.code).toBe("AssetLoadFailed");
+  });
+
+  it("ignores unsupported video decode for audio extraction when audio decode is supported", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "hevc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, canDecodeVideo: { ...baseProfile.canDecodeVideo, hevc: false } }
+    });
+
+    expect(plan.engine).toBe("mediabunny");
+    expect(plan.requiresExtension).toBe("@mediabunny/mp3-encoder");
+  });
+
+  it("falls back to FFmpeg when MediaBunny cannot encode the output", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, canEncodeVideo: { ...baseProfile.canEncodeVideo, avc: false } }
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("returns AssetLoadFailed when output encode is unsupported and FFmpeg assets are missing", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: {
+        ...baseProfile,
+        hasFfmpegAssets: false,
+        canEncodeVideo: { ...baseProfile.canEncodeVideo, avc: false }
+      }
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.reason).toBe("unsupported");
+    expect(plan.error?.code).toBe("AssetLoadFailed");
+  });
+
   it("falls back to FFmpeg when MediaBunny cannot decode the input", () => {
     const plan = planMediaJob({
       job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
