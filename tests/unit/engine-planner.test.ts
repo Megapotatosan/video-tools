@@ -57,4 +57,64 @@ describe("engine planner", () => {
 
     expect(plan.engine).toBe("ffmpeg");
   });
+
+  it("falls back to FFmpeg when MediaBunny cannot decode the input", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, canDecodeVideo: { ...baseProfile.canDecodeVideo, avc: false } }
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("returns AssetLoadFailed when input decode is unsupported and FFmpeg assets are missing", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: {
+        ...baseProfile,
+        hasFfmpegAssets: false,
+        canDecodeVideo: { ...baseProfile.canDecodeVideo, avc: false }
+      }
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.reason).toBe("unsupported");
+    expect(plan.error?.code).toBe("AssetLoadFailed");
+  });
+
+  it("routes MP3 extraction to FFmpeg when the extension cannot decode the input", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, canDecodeAudio: { ...baseProfile.canDecodeAudio, aac: false } }
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.requiresExtension).toBeUndefined();
+  });
+
+  it("reports medium memory risk for large MediaBunny native jobs", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 1_500_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("mediabunny");
+    expect(plan.memoryRisk).toBe("medium");
+  });
+
+  it("reports high memory risk for large FFmpeg fallback jobs", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 800_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, hasMp3Extension: false }
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.memoryRisk).toBe("high");
+  });
 });

@@ -39,7 +39,7 @@ export function planMediaJob(input: {
   }
 
   if (job.kind === "extract-audio" && job.output.audioCodec === "mp3") {
-    if (capabilities.hasMp3Extension) {
+    if (capabilities.hasMp3Extension && canDecodeInput(file, capabilities)) {
       return {
         engine: "mediabunny",
         reason: "extension-supported",
@@ -47,14 +47,14 @@ export function planMediaJob(input: {
         memoryRisk: "low"
       };
     }
-    return ffmpegPlan(file);
+    return ffmpegPlan(file, capabilities);
   }
 
-  if (canEncodeOutput(job, capabilities) && capabilities.hasWebCodecs) {
+  if (canEncodeOutput(job, capabilities) && canDecodeInput(file, capabilities) && capabilities.hasWebCodecs) {
     return { engine: "mediabunny", reason: "native-supported", memoryRisk: file.size > 1_000_000_000 ? "medium" : "low" };
   }
 
-  return ffmpegPlan(file);
+  return ffmpegPlan(file, capabilities);
 }
 
 function canEncodeOutput(job: Exclude<MediaJob, { kind: "probe" }>, capabilities: BrowserCapabilityProfile): boolean {
@@ -64,7 +64,17 @@ function canEncodeOutput(job: Exclude<MediaJob, { kind: "probe" }>, capabilities
   return videoOk && audioOk;
 }
 
-function ffmpegPlan(file: FileProfile): EnginePlan {
+function canDecodeInput(file: FileProfile, capabilities: BrowserCapabilityProfile): boolean {
+  const videoOk = file.videoCodec ? capabilities.canDecodeVideo[file.videoCodec] === true : true;
+  const audioOk = file.audioCodec ? capabilities.canDecodeAudio[file.audioCodec] === true : true;
+  return videoOk && audioOk;
+}
+
+function ffmpegPlan(file: FileProfile, capabilities: BrowserCapabilityProfile): EnginePlan {
+  if (!capabilities.hasFfmpegAssets) {
+    return unsupported("AssetLoadFailed", "FFmpeg assets are unavailable for local media processing.");
+  }
+
   return {
     engine: "ffmpeg",
     reason: "ffmpeg-fallback",

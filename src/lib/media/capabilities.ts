@@ -1,7 +1,5 @@
 import type { AudioCodec, VideoCodec } from "./jobs";
 
-export type CodecCapability = Record<string, boolean>;
-
 export type BrowserCapabilityProfile = {
   hasWebCodecs: boolean;
   hasWorker: boolean;
