@@ -20,6 +20,21 @@ type RunnerState =
 
 const defaultVideoOut: OutputTuple = { container: "mp4", videoCodec: "avc", audioCodec: "aac" };
 
+const VIDEO_ONLY_TOOLS: ReadonlySet<ToolSlug> = new Set([
+  "convert-video", "compress-video", "trim-video",
+  "mute-video", "rotate-video", "resize-video", "reverse-video", "crop-video"
+]);
+
+const AUDIO_EXTENSIONS = new Set([
+  "mp3", "wav", "flac", "aac", "ogg", "m4a", "opus", "wma", "aiff", "alac"
+]);
+
+function isAudioFile(file: File): boolean {
+  if (file.type.startsWith("audio/")) return true;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return AUDIO_EXTENSIONS.has(ext);
+}
+
 function buildDefaultJob(slug: ToolSlug): MediaJob {
   switch (slug) {
     case "media-info":     return { kind: "probe" };
@@ -48,6 +63,13 @@ export function ToolRunner({ tool }: { tool: ToolDefinition }) {
   }, []);
 
   const handleFile = useCallback((file: File) => {
+    if (VIDEO_ONLY_TOOLS.has(tool.slug) && isAudioFile(file)) {
+      setState({
+        phase: "error",
+        message: `"${file.name}" is an audio file. This tool only processes video files. To work with audio, use the Extract Audio tool.`
+      });
+      return;
+    }
     const capabilities = detectBrowserCapabilities();
     const fileProfile: FileProfile = { size: file.size };
     const job = buildDefaultJob(tool.slug);
