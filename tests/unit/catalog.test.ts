@@ -4,13 +4,18 @@ import { toolCatalog } from "@/lib/tools/catalog";
 import type { OutputTuple } from "@/lib/media/jobs";
 
 describe("tool catalog", () => {
-  it("contains the five launch tools", () => {
+  it("contains all ten tools in order", () => {
     expect(toolCatalog.map((tool) => tool.slug)).toEqual([
       "media-info",
       "convert-video",
       "compress-video",
       "trim-video",
-      "extract-audio"
+      "extract-audio",
+      "mute-video",
+      "rotate-video",
+      "resize-video",
+      "reverse-video",
+      "crop-video"
     ]);
   });
 
@@ -24,6 +29,11 @@ describe("tool catalog", () => {
     expect(toolCatalog.find((tool) => tool.slug === "compress-video")?.outputs).toEqual(videoOutputs);
     expect(toolCatalog.find((tool) => tool.slug === "trim-video")?.outputs).toEqual(videoOutputs);
     expect(toolCatalog.find((tool) => tool.slug === "extract-audio")?.outputs).toEqual(audioOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "mute-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "rotate-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "resize-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "reverse-video")?.outputs).toEqual(videoOutputs);
+    expect(toolCatalog.find((tool) => tool.slug === "crop-video")?.outputs).toEqual(videoOutputs);
   });
 
   it("prevents consumers from mutating catalog outputs", () => {
