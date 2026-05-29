@@ -6,16 +6,14 @@ import type { MediaJob } from "./jobs";
 export type FfmpegAssetPaths = {
   coreURL: string;
   wasmURL: string;
-  workerURL: string;
 };
 
 const CDN = "https://unpkg.com/@ffmpeg/core@0.12.9/dist/umd";
 
 export function getFfmpegAssetPaths(): FfmpegAssetPaths {
   return {
-    coreURL:   `${CDN}/ffmpeg-core.js`,
-    wasmURL:   `${CDN}/ffmpeg-core.wasm`,
-    workerURL: `${CDN}/ffmpeg-core.worker.js`
+    coreURL: `${CDN}/ffmpeg-core.js`,
+    wasmURL: `${CDN}/ffmpeg-core.wasm`
   };
 }
 
@@ -103,9 +101,8 @@ export class FfmpegWasmEngine {
     onProgress?.({ phase: "loading", message: "Loading FFmpeg…" });
     const paths = getFfmpegAssetPaths();
     await ffmpeg.load({
-      coreURL:   await toBlobURL(paths.coreURL,   "text/javascript"),
-      wasmURL:   await toBlobURL(paths.wasmURL,   "application/wasm"),
-      workerURL: await toBlobURL(paths.workerURL, "text/javascript")
+      coreURL: await toBlobURL(paths.coreURL, "text/javascript"),
+      wasmURL: await toBlobURL(paths.wasmURL, "application/wasm")
     });
 
     this.ffmpeg = ffmpeg;
