@@ -1,7 +1,17 @@
 export type ContainerFormat = "mp4" | "webm" | "mov" | "mkv" | "mp3" | "m4a" | "wav";
 export type VideoCodec = "avc" | "hevc" | "vp8" | "vp9" | "av1";
 export type AudioCodec = "aac" | "opus" | "mp3" | "flac" | "pcm-s16";
-export type ToolSlug = "media-info" | "convert-video" | "compress-video" | "trim-video" | "extract-audio";
+export type ToolSlug =
+  | "media-info"
+  | "convert-video"
+  | "compress-video"
+  | "trim-video"
+  | "extract-audio"
+  | "mute-video"
+  | "rotate-video"
+  | "resize-video"
+  | "reverse-video"
+  | "crop-video";
 
 export type OutputTuple = {
   readonly container: ContainerFormat;
@@ -13,4 +23,9 @@ export type MediaJob =
   | { kind: "probe" }
   | { kind: "transcode"; output: OutputTuple; bitrate?: number; width?: number; height?: number }
   | { kind: "trim"; startSeconds: number; endSeconds: number; output: OutputTuple }
-  | { kind: "extract-audio"; output: OutputTuple; bitrate?: number };
+  | { kind: "extract-audio"; output: OutputTuple; bitrate?: number }
+  | { kind: "mute"; output: OutputTuple }
+  | { kind: "rotate"; output: OutputTuple; degrees: 90 | 180 | 270; flipH?: boolean; flipV?: boolean }
+  | { kind: "resize"; output: OutputTuple; width: number; height: number }
+  | { kind: "reverse"; output: OutputTuple }
+  | { kind: "crop"; output: OutputTuple; x: number; y: number; width: number; height: number };

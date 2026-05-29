@@ -221,4 +221,92 @@ describe("engine planner", () => {
     expect(plan.requiresExtension).toBe("@mediabunny/mp3-encoder");
     expect(plan.memoryRisk).toBe("medium");
   });
+
+  it("routes mute job to FFmpeg", () => {
+    const plan = planMediaJob({
+      job: { kind: "mute", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("routes rotate job to FFmpeg", () => {
+    const plan = planMediaJob({
+      job: { kind: "rotate", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" }, degrees: 90 },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("routes resize job to FFmpeg", () => {
+    const plan = planMediaJob({
+      job: { kind: "resize", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" }, width: 1280, height: 720 },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("routes reverse job to FFmpeg", () => {
+    const plan = planMediaJob({
+      job: { kind: "reverse", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("routes crop job to FFmpeg", () => {
+    const plan = planMediaJob({
+      job: { kind: "crop", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" }, x: 0, y: 0, width: 640, height: 360 },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+    expect(plan.reason).toBe("ffmpeg-fallback");
+  });
+
+  it("rejects audio-only output tuple for mute job", () => {
+    const plan = planMediaJob({
+      job: { kind: "mute", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.error?.code).toBe("UnsupportedCodec");
+  });
+
+  it("rejects audio-only output tuple for rotate job", () => {
+    const plan = planMediaJob({
+      job: { kind: "rotate", output: { container: "mp3", audioCodec: "mp3" }, degrees: 180 },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.error?.code).toBe("UnsupportedCodec");
+  });
+
+  it("returns AssetLoadFailed for filter jobs when FFmpeg assets are missing", () => {
+    const plan = planMediaJob({
+      job: { kind: "reverse", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: { ...baseProfile, hasFfmpegAssets: false }
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.error?.code).toBe("AssetLoadFailed");
+  });
 });

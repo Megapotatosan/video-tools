@@ -50,6 +50,36 @@ export const toolCatalog: readonly ToolDefinition[] = Object.freeze([
     name: "Extract Audio",
     summary: "Extract audio to MP3, M4A, or WAV without uploading the file.",
     outputs: freezeOutputs(audioOutputs)
+  }),
+  defineTool({
+    slug: "mute-video",
+    name: "Mute Video",
+    summary: "Remove the audio track from a video and save the result locally.",
+    outputs: freezeOutputs(videoOutputs)
+  }),
+  defineTool({
+    slug: "rotate-video",
+    name: "Rotate Video",
+    summary: "Rotate a video 90°, 180°, or 270°, with optional horizontal or vertical flip.",
+    outputs: freezeOutputs(videoOutputs)
+  }),
+  defineTool({
+    slug: "resize-video",
+    name: "Resize Video",
+    summary: "Downscale or upscale a video to a target resolution entirely in the browser.",
+    outputs: freezeOutputs(videoOutputs)
+  }),
+  defineTool({
+    slug: "reverse-video",
+    name: "Reverse Video",
+    summary: "Play a video backwards — all processing stays on your device.",
+    outputs: freezeOutputs(videoOutputs)
+  }),
+  defineTool({
+    slug: "crop-video",
+    name: "Crop Video",
+    summary: "Crop a video to a rectangular region without uploading it.",
+    outputs: freezeOutputs(videoOutputs)
   })
 ]);
 

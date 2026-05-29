@@ -42,6 +42,12 @@ export function planMediaJob(input: {
     return { engine: "mediabunny", reason: "native-supported", memoryRisk: "low" };
   }
 
+  // These operations use FFmpeg filter chains not exposed by the MediaBunny job API.
+  if (job.kind === "mute" || job.kind === "rotate" || job.kind === "resize" ||
+      job.kind === "reverse" || job.kind === "crop") {
+    return ffmpegPlan(file, capabilities);
+  }
+
   if (job.kind === "extract-audio" && job.output.audioCodec === "mp3") {
     if (capabilities.hasMp3Extension && capabilities.hasWebCodecs && canDecodeInputForJob(job, file, capabilities)) {
       return {
@@ -85,6 +91,10 @@ function canDecodeInputForJob(
 function isValidOutputForJob(job: MediaJob, output: OutputTuple): boolean {
   if (job.kind === "extract-audio") {
     return output.videoCodec === undefined;
+  }
+  if (job.kind === "mute" || job.kind === "rotate" || job.kind === "resize" ||
+      job.kind === "reverse" || job.kind === "crop") {
+    return output.videoCodec !== undefined;
   }
   return true;
 }
