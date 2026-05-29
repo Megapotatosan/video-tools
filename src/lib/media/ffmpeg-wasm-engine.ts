@@ -8,7 +8,7 @@ export type FfmpegAssetPaths = {
   wasmURL: string;
 };
 
-const CDN = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+const CDN = "https://unpkg.com/@ffmpeg/core@0.12.9/dist/umd";
 
 export function getFfmpegAssetPaths(): FfmpegAssetPaths {
   return {

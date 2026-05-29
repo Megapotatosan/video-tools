@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getFfmpegAssetPaths } from "@/lib/media/ffmpeg-wasm-engine";
 
-const CDN = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+const CDN = "https://unpkg.com/@ffmpeg/core@0.12.9/dist/umd";
 
 describe("ffmpeg wasm engine", () => {
   it("loads FFmpeg assets from pinned CDN", () => {
