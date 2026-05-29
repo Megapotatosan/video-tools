@@ -1,6 +1,6 @@
 import type { BrowserCapabilityProfile } from "./capabilities";
 import type { MediaError } from "./errors";
-import type { AudioCodec, ContainerFormat, MediaJob, VideoCodec } from "./jobs";
+import type { AudioCodec, ContainerFormat, MediaJob, OutputTuple, VideoCodec } from "./jobs";
 import { isSupportedOutputTuple } from "./support-matrix";
 
 export type FileProfile = {
@@ -30,6 +30,10 @@ export function planMediaJob(input: {
     return unsupported("UnsupportedCodec", "The selected container and codec combination is not supported.");
   }
 
+  if (output && !isValidOutputForJob(job, output)) {
+    return unsupported("UnsupportedCodec", "The selected output is not valid for this job type.");
+  }
+
   if (!capabilities.hasWorker) {
     return unsupported("MissingBrowserAPI", "This browser does not support the worker features required for local media processing.");
   }
@@ -44,7 +48,7 @@ export function planMediaJob(input: {
         engine: "mediabunny",
         reason: "extension-supported",
         requiresExtension: "@mediabunny/mp3-encoder",
-        memoryRisk: "low"
+        memoryRisk: file.size > 1_000_000_000 ? "medium" : "low"
       };
     }
     return ffmpegPlan(file, capabilities);
@@ -70,12 +74,19 @@ function canDecodeInputForJob(
   capabilities: BrowserCapabilityProfile
 ): boolean {
   if (job.kind === "extract-audio") {
-    return file.audioCodec ? capabilities.canDecodeAudio[file.audioCodec] === true : true;
+    return file.audioCodec ? capabilities.canDecodeAudio[file.audioCodec] === true : false;
   }
 
-  const videoOk = file.videoCodec ? capabilities.canDecodeVideo[file.videoCodec] === true : true;
-  const audioOk = file.audioCodec ? capabilities.canDecodeAudio[file.audioCodec] === true : true;
+  const videoOk = file.videoCodec ? capabilities.canDecodeVideo[file.videoCodec] === true : false;
+  const audioOk = file.audioCodec ? capabilities.canDecodeAudio[file.audioCodec] === true : false;
   return videoOk && audioOk;
+}
+
+function isValidOutputForJob(job: MediaJob, output: OutputTuple): boolean {
+  if (job.kind === "extract-audio") {
+    return output.videoCodec === undefined;
+  }
+  return true;
 }
 
 function ffmpegPlan(file: FileProfile, capabilities: BrowserCapabilityProfile): EnginePlan {

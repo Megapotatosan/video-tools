@@ -178,4 +178,47 @@ describe("engine planner", () => {
     expect(plan.engine).toBe("ffmpeg");
     expect(plan.memoryRisk).toBe("high");
   });
+
+  it("falls back to FFmpeg when audio codec metadata is missing for extract-audio", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "avc" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+  });
+
+  it("falls back to FFmpeg when video codec metadata is missing for transcode", () => {
+    const plan = planMediaJob({
+      job: { kind: "transcode", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 10_000_000, container: "mp4", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("ffmpeg");
+  });
+
+  it("rejects video output tuple for extract-audio job", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp4", videoCodec: "avc", audioCodec: "aac" } },
+      file: { size: 8_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("none");
+    expect(plan.error?.code).toBe("UnsupportedCodec");
+  });
+
+  it("reports medium memory risk for large MP3 extension extraction", () => {
+    const plan = planMediaJob({
+      job: { kind: "extract-audio", output: { container: "mp3", audioCodec: "mp3" } },
+      file: { size: 1_500_000_000, container: "mp4", videoCodec: "avc", audioCodec: "aac" },
+      capabilities: baseProfile
+    });
+
+    expect(plan.engine).toBe("mediabunny");
+    expect(plan.requiresExtension).toBe("@mediabunny/mp3-encoder");
+    expect(plan.memoryRisk).toBe("medium");
+  });
 });
