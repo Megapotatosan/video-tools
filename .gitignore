@@ -9,7 +9,3 @@ tsconfig.tsbuildinfo
 .env
 .env.*
 !.env.example
-
-# FFmpeg WASM assets — copied from @ffmpeg/core at build time, not committed
-public/ffmpeg/ffmpeg-core.js
-public/ffmpeg/ffmpeg-core.wasm

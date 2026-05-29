@@ -6,14 +6,14 @@ import type { MediaJob } from "./jobs";
 export type FfmpegAssetPaths = {
   coreURL: string;
   wasmURL: string;
-  workerURL: string;
 };
+
+const CDN = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
 
 export function getFfmpegAssetPaths(): FfmpegAssetPaths {
   return {
-    coreURL: "/ffmpeg/ffmpeg-core.js",
-    wasmURL: "/ffmpeg/ffmpeg-core.wasm",
-    workerURL: "/ffmpeg/ffmpeg-core.worker.js"
+    coreURL: `${CDN}/ffmpeg-core.js`,
+    wasmURL: `${CDN}/ffmpeg-core.wasm`
   };
 }
 
