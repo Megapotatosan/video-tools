@@ -17,8 +17,28 @@ export function getFfmpegAssetPaths(): FfmpegAssetPaths {
   };
 }
 
+function diagnoseFailure(log: string): string {
+  if (log.includes("hardware accelerated AV1") || log.includes("[av1 @") && log.includes("not implemented")) {
+    return "Cannot decode this video — it uses the AV1 codec which requires hardware support not available in the browser. Re-encode to H.264 and try again.";
+  }
+  if (log.includes("hevc") && (log.includes("not found") || log.includes("not implemented"))) {
+    return "Cannot decode this H.265/HEVC video in the browser. Re-encode to H.264 and try again.";
+  }
+  if (log.includes("Decoder") && log.includes("not found")) {
+    return "Unsupported input codec — the video uses a codec not available in this FFmpeg build. Try converting to H.264 first.";
+  }
+  if (log.includes("Invalid data found")) {
+    return "The file appears to be corrupted or uses an unsupported format.";
+  }
+  if (log.includes("moov atom not found")) {
+    return "The video file is incomplete or corrupted (missing moov atom).";
+  }
+  return "FFmpeg exited with an error. See browser console for full details.";
+}
+
 export class FfmpegWasmEngine {
   private ffmpeg: import("@ffmpeg/ffmpeg").FFmpeg | null = null;
+  private runLog: string[] = [];
 
   async probe(file: File): Promise<Record<string, unknown>> {
     return {
@@ -48,13 +68,16 @@ export class FfmpegWasmEngine {
     await ffmpeg.writeFile(inputName, await fetchFile(file));
     if (signal.aborted) throw createAbortError();
 
-    console.log("[FFmpeg] exec:", ["-y", "-i", inputName, ...args, outputName].join(" "));
+    this.runLog = [];
+    const cmd = ["-y", "-i", inputName, ...args, outputName];
+    console.log("[FFmpeg] exec:", cmd.join(" "));
     onProgress?.({ phase: "processing", message: "Processing…" });
-    const exitCode = await ffmpeg.exec(["-y", "-i", inputName, ...args, outputName]);
+    const exitCode = await ffmpeg.exec(cmd);
 
     if (signal.aborted) throw createAbortError();
     if (exitCode !== 0) {
-      throw { code: "EncodeFailed", message: `FFmpeg exited with code ${exitCode}.`, recoverable: true };
+      const message = diagnoseFailure(this.runLog.join("\n"));
+      throw { code: "EncodeFailed", message, recoverable: true };
     }
 
     onProgress?.({ phase: "finalizing", message: "Finalizing…" });
@@ -88,6 +111,7 @@ export class FfmpegWasmEngine {
 
     ffmpeg.on("log", ({ message }: { message: string }) => {
       console.log("[FFmpeg]", message);
+      this.runLog.push(message);
     });
 
     ffmpeg.on("progress", ({ progress }: { progress: number }) => {
