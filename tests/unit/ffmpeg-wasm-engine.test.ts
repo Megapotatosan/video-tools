@@ -8,6 +8,7 @@ describe("ffmpeg wasm engine", () => {
     const paths = getFfmpegAssetPaths();
     expect(paths.coreURL).toBe(`${CDN}/ffmpeg-core.js`);
     expect(paths.wasmURL).toBe(`${CDN}/ffmpeg-core.wasm`);
+    expect(paths.workerURL).toBe(`${CDN}/ffmpeg-core.worker.js`);
   });
 
   it("asset URLs are pinned to a specific version", () => {

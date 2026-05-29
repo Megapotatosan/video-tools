@@ -6,19 +6,20 @@ import type { MediaJob } from "./jobs";
 export type FfmpegAssetPaths = {
   coreURL: string;
   wasmURL: string;
+  workerURL: string;
 };
 
 const CDN = "https://unpkg.com/@ffmpeg/core@0.12.9/dist/umd";
 
 export function getFfmpegAssetPaths(): FfmpegAssetPaths {
   return {
-    coreURL: `${CDN}/ffmpeg-core.js`,
-    wasmURL: `${CDN}/ffmpeg-core.wasm`
+    coreURL:   `${CDN}/ffmpeg-core.js`,
+    wasmURL:   `${CDN}/ffmpeg-core.wasm`,
+    workerURL: `${CDN}/ffmpeg-core.worker.js`
   };
 }
 
 export class FfmpegWasmEngine {
-  // FFmpeg instance is retained across jobs on the same engine instance.
   private ffmpeg: import("@ffmpeg/ffmpeg").FFmpeg | null = null;
 
   async probe(file: File): Promise<Record<string, unknown>> {
@@ -40,7 +41,7 @@ export class FfmpegWasmEngine {
     const ffmpeg = await this.ensureLoaded(signal, onProgress);
     if (signal.aborted) throw createAbortError();
 
-    const inputExt = file.name.split(".").pop() ?? "bin";
+    const inputExt = (file.name.split(".").pop() ?? "bin").toLowerCase();
     const inputName = `input.${inputExt}`;
     const { args, outputName, mimeType } = buildFfmpegArgs(job);
 
@@ -49,6 +50,7 @@ export class FfmpegWasmEngine {
     await ffmpeg.writeFile(inputName, await fetchFile(file));
     if (signal.aborted) throw createAbortError();
 
+    console.log("[FFmpeg] exec:", ["-y", "-i", inputName, ...args, outputName].join(" "));
     onProgress?.({ phase: "processing", message: "Processing…" });
     const exitCode = await ffmpeg.exec(["-y", "-i", inputName, ...args, outputName]);
 
@@ -85,6 +87,11 @@ export class FfmpegWasmEngine {
     const ffmpeg = new FFmpeg();
 
     signal.addEventListener("abort", () => { ffmpeg.terminate(); }, { once: true });
+
+    ffmpeg.on("log", ({ message }: { message: string }) => {
+      console.log("[FFmpeg]", message);
+    });
+
     ffmpeg.on("progress", ({ progress }: { progress: number }) => {
       onProgress?.({
         phase: "processing",
@@ -96,8 +103,9 @@ export class FfmpegWasmEngine {
     onProgress?.({ phase: "loading", message: "Loading FFmpeg…" });
     const paths = getFfmpegAssetPaths();
     await ffmpeg.load({
-      coreURL: await toBlobURL(paths.coreURL, "text/javascript"),
-      wasmURL: await toBlobURL(paths.wasmURL, "application/wasm")
+      coreURL:   await toBlobURL(paths.coreURL,   "text/javascript"),
+      wasmURL:   await toBlobURL(paths.wasmURL,   "application/wasm"),
+      workerURL: await toBlobURL(paths.workerURL, "text/javascript")
     });
 
     this.ffmpeg = ffmpeg;
