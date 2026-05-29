@@ -1,8 +1,8 @@
 import type { AudioCodec, ContainerFormat, MediaJob, OutputTuple, VideoCodec } from "./jobs";
 
 const videoCodecArgs: Record<VideoCodec, string[]> = {
-  avc:  ["-c:v", "libx264", "-preset", "fast", "-crf", "23"],
-  hevc: ["-c:v", "libx265", "-preset", "fast", "-crf", "28"],
+  avc:  ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-pix_fmt", "yuv420p"],
+  hevc: ["-c:v", "libx265", "-preset", "ultrafast", "-crf", "28"],
   vp8:  ["-c:v", "libvpx", "-b:v", "1M"],
   vp9:  ["-c:v", "libvpx-vp9", "-crf", "30", "-b:v", "0"],
   av1:  ["-c:v", "libaom-av1", "-crf", "30", "-b:v", "0", "-cpu-used", "8"]

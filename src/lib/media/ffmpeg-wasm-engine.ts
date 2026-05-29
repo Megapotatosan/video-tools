@@ -50,7 +50,7 @@ export class FfmpegWasmEngine {
     if (signal.aborted) throw createAbortError();
 
     onProgress?.({ phase: "processing", message: "Processing…" });
-    const exitCode = await ffmpeg.exec(["-i", inputName, ...args, outputName]);
+    const exitCode = await ffmpeg.exec(["-y", "-i", inputName, ...args, outputName]);
 
     if (signal.aborted) throw createAbortError();
     if (exitCode !== 0) {
